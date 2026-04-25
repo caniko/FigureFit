@@ -40,21 +40,6 @@ cargo test
 cargo run -- path/to/layout.toml --check --preview --explain --top-n 3
 ```
 
-While it is still mirrored inside the SynDB monorepo, workspace verification is:
-
-```bash
-nix develop --command cargo test -p figurefit
-```
-
-To export the current crate subtree to the Codeberg repository, run:
-
-```bash
-crates/tools/figurefit/scripts/export-codeberg.sh
-```
-
-The script defaults to `ssh://git@codeberg.org/caniko/FigureFit.git` and pushes
-the extracted subtree to `main`.
-
 ### As a library
 
 ```rust

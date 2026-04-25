@@ -1,0 +1,7 @@
+/target/
+**/*.rs.bk
+*.profraw
+*.profdata
+*_layout.tex
+*_report.toml
+*_preview.svg

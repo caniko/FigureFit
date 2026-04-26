@@ -1,5 +1,42 @@
 use std::process::Command;
 
+use lopdf::{Document, Object, Stream, dictionary};
+
+fn write_pdf(path: &std::path::Path, media: [i32; 4], crop: Option<[i32; 4]>) {
+    let mut doc = Document::with_version("1.5");
+    let pages_id = doc.new_object_id();
+    let content_id = doc.add_object(Stream::new(dictionary! {}, b"0 0 120 60 re f".to_vec()));
+    let mut page = dictionary! {
+        "Type" => "Page",
+        "Parent" => pages_id,
+        "Contents" => content_id,
+        "MediaBox" => media.iter().map(|n| Object::Integer(i64::from(*n))).collect::<Vec<_>>(),
+    };
+    if let Some(crop) = crop {
+        page.set(
+            "CropBox",
+            crop.iter()
+                .map(|n| Object::Integer(i64::from(*n)))
+                .collect::<Vec<_>>(),
+        );
+    }
+    let page_id = doc.add_object(page);
+    doc.objects.insert(
+        pages_id,
+        Object::Dictionary(dictionary! {
+            "Type" => "Pages",
+            "Kids" => vec![page_id.into()],
+            "Count" => 1,
+        }),
+    );
+    let catalog_id = doc.add_object(dictionary! {
+        "Type" => "Catalog",
+        "Pages" => pages_id,
+    });
+    doc.trailer.set("Root", catalog_id);
+    doc.save(path).unwrap();
+}
+
 fn write_spec(dir: &std::path::Path) -> std::path::PathBuf {
     let spec = dir.join("CLITest.toml");
     std::fs::write(
@@ -122,11 +159,13 @@ panels = ["A"]
 }
 
 #[test]
-fn cli_derives_svg_source_aspect_and_rejects_deferred_bbox_modes() {
+fn cli_derives_svg_media_and_tight_source_aspects() {
     let tmp = tempfile::tempdir().unwrap();
     std::fs::write(
         tmp.path().join("panel.svg"),
-        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"></svg>"#,
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100">
+  <rect x="0" y="0" width="80" height="40" fill="black"/>
+</svg>"#,
     )
     .unwrap();
     let spec = tmp.path().join("SourceAspect.toml");
@@ -168,9 +207,9 @@ panels = ["A"]
     let report: toml::Value = toml::from_str(&report_text).unwrap();
     assert_eq!(report["placed"][0]["aspect_target"].as_float(), Some(3.0));
 
-    let deferred = tmp.path().join("DeferredBBox.toml");
+    let tight = tmp.path().join("TightBBox.toml");
     std::fs::write(
-        &deferred,
+        &tight,
         r#"
 [page]
 width_mm = 160
@@ -190,12 +229,108 @@ panels = ["A"]
     .unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_figurefit"))
-        .arg(&deferred)
+        .arg(&tight)
+        .arg("--check")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report_text = std::fs::read_to_string(tmp.path().join("TightBBox_report.toml")).unwrap();
+    let report: toml::Value = toml::from_str(&report_text).unwrap();
+    assert_eq!(report["placed"][0]["aspect_target"].as_float(), Some(2.0));
+}
+
+#[test]
+fn cli_derives_pdf_media_and_crop_source_aspects() {
+    let tmp = tempfile::tempdir().unwrap();
+    write_pdf(
+        &tmp.path().join("panel.pdf"),
+        [0, 0, 400, 200],
+        Some([0, 0, 300, 100]),
+    );
+    let spec = tmp.path().join("PdfCrop.toml");
+    std::fs::write(
+        &spec,
+        r#"
+[page]
+width_mm = 160
+max_height_mm = 216
+
+[figure]
+name = "PdfCrop"
+
+[[panel]]
+id = "A"
+source = "panel.pdf"
+bbox = "crop"
+
+[[group]]
+id = "root"
+kind = "atomic"
+panels = ["A"]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_figurefit"))
+        .arg(&spec)
+        .arg("--check")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report_text = std::fs::read_to_string(tmp.path().join("PdfCrop_report.toml")).unwrap();
+    let report: toml::Value = toml::from_str(&report_text).unwrap();
+    assert_eq!(report["placed"][0]["aspect_target"].as_float(), Some(3.0));
+}
+
+#[test]
+fn cli_rejects_unsupported_svg_crop() {
+    let tmp = tempfile::tempdir().unwrap();
+    std::fs::write(
+        tmp.path().join("panel.svg"),
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"></svg>"#,
+    )
+    .unwrap();
+    let spec = tmp.path().join("SvgCrop.toml");
+    std::fs::write(
+        &spec,
+        r#"
+[page]
+width_mm = 160
+max_height_mm = 216
+
+[figure]
+name = "SvgCrop"
+
+[[panel]]
+id = "A"
+source = "panel.svg"
+bbox = "crop"
+
+[[group]]
+id = "root"
+kind = "atomic"
+panels = ["A"]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_figurefit"))
+        .arg(&spec)
         .output()
         .unwrap();
     assert!(!output.status.success());
     assert!(
-        String::from_utf8_lossy(&output.stderr).contains("not yet supported"),
+        String::from_utf8_lossy(&output.stderr).contains("SVG has no crop box"),
         "stderr:\n{}",
         String::from_utf8_lossy(&output.stderr)
     );

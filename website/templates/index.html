@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Rust CLI + library</p>
+    <h1>{{ section.title }}</h1>
+    <p class="tagline">{{ section.extra.tagline }}</p>
+    <p class="subtitle">{{ section.extra.subtitle }}</p>
+    <div class="actions">
+      <a class="button primary" href="{{ config.base_url }}/docs/">Get started</a>
+      <a class="button secondary" href="https://codeberg.org/caniko/FigureFit">View source</a>
+    </div>
+  </div>
+  <div class="layout-preview" aria-label="FigureFit panel layout preview">
+    <div class="preview-toolbar">
+      <span>CF01_report.toml</span>
+      <span class="status">check passed</span>
+    </div>
+    <div class="preview-grid">
+      <div class="panel panel-a">A</div>
+      <div class="panel panel-b">B</div>
+      <div class="panel panel-c">C</div>
+      <div class="panel panel-d">D</div>
+      <div class="panel panel-e">E</div>
+      <div class="panel panel-f">F</div>
+      <div class="inset">inset</div>
+    </div>
+    <div class="score-row">
+      <span>height utilization 0.91</span>
+      <span>void 0.08</span>
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  {% for feature in section.extra.features %}
+  <article class="feature-card">
+    <h2>{{ feature.title }}</h2>
+    <p>{{ feature.description }}</p>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="install">
+  <div>
+    <h2>Install</h2>
+    <p>Build from the Codeberg repository with Cargo.</p>
+  </div>
+  <pre><code>{{ section.extra.install }}</code></pre>
+</section>
+{% endblock content %}

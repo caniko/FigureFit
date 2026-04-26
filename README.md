@@ -2,8 +2,6 @@
 
 A scientific multi-panel figure fitting and layout solver.
 
-Canonical repository: <https://codeberg.org/caniko/FigureFit>
-
 Given a TOML specification describing panels (with target aspect ratios) and
 a hierarchical grouping structure, the solver finds an optimal 2D tiling that
 minimizes aspect ratio distortion while respecting group boundaries, priority
@@ -119,8 +117,8 @@ panels = ["B", "C"]
 |-------|------|---------|-------------|
 | `id` | string | required | Unique identifier (e.g. `"A"`, `"B"`) |
 | `aspect` | float | required unless `source` is set | Target aspect ratio (width / height) |
-| `source` | string | — | SVG source used to derive aspect when `aspect` is omitted |
-| `bbox` | enum | `media` | Source bbox policy. Only `media` is currently supported; `crop` and `tight` are deferred |
+| `source` | string | — | SVG or PDF source used to derive aspect when `aspect` is omitted |
+| `bbox` | enum | `media` | Source bbox policy: `media`, `crop`, or `tight` |
 | `required` | bool | group priority based | Whether this panel is required |
 | `min_width` | float | — | Min width as fraction of page width |
 | `max_width` | float | — | Max width as fraction of page width |
@@ -132,11 +130,19 @@ panels = ["B", "C"]
 
 #### Alternative aspect ratios
 
-When `aspect` is omitted and `source` points to an SVG, FigureFit derives
-the panel aspect from the SVG `viewBox`, or from `width`/`height` metadata
-when no `viewBox` is present. PDF aspect derivation and non-media SVG bbox
-policies are not implemented in this stabilization pass; specify `aspect`
-explicitly for those cases.
+When `aspect` is omitted and `source` points to an SVG or PDF, FigureFit
+derives the panel aspect from the requested bbox policy:
+
+- SVG `media`: `viewBox`, or `width`/`height` metadata when no `viewBox` is present
+- SVG `tight`: visible content bounds, including stroke bounds
+- SVG `crop`: unsupported because SVG has no crop box
+- PDF `media`: first-page `MediaBox`
+- PDF `crop`: first-page `CropBox`, falling back to `MediaBox` when no `CropBox` exists
+- PDF `tight`: first page rendered through `mutool` to SVG, then measured as SVG tight bounds
+
+Multi-page PDFs use page 1. If a requested bbox cannot be computed, FigureFit
+fails with an actionable error instead of silently falling back. Specify
+`aspect` explicitly when a source cannot be measured in the intended way.
 
 A panel can offer multiple aspect ratios. The solver picks whichever
 produces the best overall layout:
@@ -181,6 +187,32 @@ child group IDs.
 | `min_panels` | int | — | Required for `flexible` groups |
 | `max_panels` | int | — | Maximum included panels for `flexible` groups |
 | `direction` | enum | — | `row` or `column` split constraint for composite children |
+
+### Insets
+
+Insets are declared inside the host panel with nested `[[panel.inset]]`
+tables. The inset panel is excluded from the main group solve and placed
+inside the host after the host rectangle is known.
+
+```toml
+[[panel]]
+id = "A"
+aspect = 1.5
+
+  [[panel.inset]]
+  panel = "B"
+  anchor = "top-right"
+  w_frac = 0.35
+  h_frac = 0.35
+  gap_mm = 1.0
+
+[[panel]]
+id = "B"
+aspect = 1.0
+```
+
+Supported anchors: `top-left`, `top-right`, `bottom-left`, and
+`bottom-right`.
 
 ### Solver and quality options
 

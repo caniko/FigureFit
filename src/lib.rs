@@ -32,4 +32,5 @@ pub mod codegen;
 pub mod config;
 pub mod resolve;
 pub mod solve;
+mod source_aspect;
 pub mod tree;

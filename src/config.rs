@@ -7,7 +7,9 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+use crate::source_aspect;
 
 // ── Top-level spec ──────────────────────────────────────────────────
 
@@ -318,11 +320,11 @@ impl FigureSpec {
         self.groups.iter().map(|g| (g.id.as_str(), g)).collect()
     }
 
-    /// Derive missing panel aspects from SVG source metadata.
+    /// Derive missing panel aspects from source metadata.
     ///
-    /// Only `bbox = "media"` is currently supported. PDF aspect derivation and
-    /// crop/tight bbox policies are intentionally deferred so specs do not
-    /// silently get a different interpretation than requested.
+    /// SVG media and tight bbox modes are supported. PDF media, crop, and tight
+    /// modes are supported for the first page. Unsupported combinations fail
+    /// explicitly rather than falling back to an unintended bbox.
     pub fn derive_content_aspects(&mut self, base_dir: &Path) -> Result<(), String> {
         for panel in &mut self.panels {
             if panel.aspect.is_some() {
@@ -331,21 +333,15 @@ impl FigureSpec {
             let Some(source) = &panel.source else {
                 continue;
             };
-            if panel.bbox != BBoxMode::Media {
-                return Err(format!(
-                    "Panel '{}': bbox policy {:?} is not yet supported for source-derived aspects; \
-                     use bbox = \"media\" or specify aspect explicitly",
-                    panel.id, panel.bbox
-                ));
-            }
-            let source_path = resolve_source_path(base_dir, source);
-            panel.aspect = Some(derive_aspect_from_source(&source_path).map_err(|e| {
-                format!(
-                    "Panel '{}': failed to derive aspect from {}: {e}",
-                    panel.id,
-                    source_path.display()
-                )
-            })?);
+            panel.aspect = Some(
+                source_aspect::derive_aspect(base_dir, source, panel.bbox).map_err(|e| {
+                    format!(
+                        "Panel '{}': failed to derive aspect from {}: {e}",
+                        panel.id,
+                        source_aspect::resolve_source_path(base_dir, source).display()
+                    )
+                })?,
+            );
         }
         Ok(())
     }
@@ -691,66 +687,6 @@ impl FigureSpec {
             .map(|g| g.id.as_str())
             .find(|id| !children_of_any.contains(id))
     }
-}
-
-fn resolve_source_path(base_dir: &Path, source: &str) -> PathBuf {
-    let path = PathBuf::from(source);
-    if path.is_absolute() {
-        path
-    } else {
-        base_dir.join(path)
-    }
-}
-
-fn derive_aspect_from_source(path: &Path) -> Result<f64, String> {
-    match path.extension().and_then(|s| s.to_str()) {
-        Some(ext) if ext.eq_ignore_ascii_case("svg") => derive_svg_aspect(path),
-        Some(ext) if ext.eq_ignore_ascii_case("pdf") => {
-            Err("PDF aspect derivation is not yet available; specify aspect explicitly".into())
-        }
-        Some(ext) => Err(format!("unsupported source extension .{ext}")),
-        None => Err("source has no file extension".into()),
-    }
-}
-
-fn derive_svg_aspect(path: &Path) -> Result<f64, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-    if let Some(view_box) = attr_value(&text, "viewBox").or_else(|| attr_value(&text, "viewbox")) {
-        let nums: Vec<f64> = view_box
-            .split(|c: char| c.is_whitespace() || c == ',')
-            .filter(|s| !s.is_empty())
-            .filter_map(|s| s.parse().ok())
-            .collect();
-        if nums.len() == 4 && nums[2] > 0.0 && nums[3] > 0.0 {
-            return Ok(nums[2] / nums[3]);
-        }
-    }
-    let width = attr_value(&text, "width").and_then(|s| parse_svg_length(&s));
-    let height = attr_value(&text, "height").and_then(|s| parse_svg_length(&s));
-    match (width, height) {
-        (Some(w), Some(h)) if w > 0.0 && h > 0.0 => Ok(w / h),
-        _ => Err("SVG must have viewBox or width/height metadata".into()),
-    }
-}
-
-fn attr_value(text: &str, attr: &str) -> Option<String> {
-    let needle = format!("{attr}=");
-    let start = text.find(&needle)? + needle.len();
-    let quote = text[start..].chars().next()?;
-    if quote != '"' && quote != '\'' {
-        return None;
-    }
-    let rest = &text[start + quote.len_utf8()..];
-    let end = rest.find(quote)?;
-    Some(rest[..end].to_string())
-}
-
-fn parse_svg_length(raw: &str) -> Option<f64> {
-    let number: String = raw
-        .chars()
-        .take_while(|c| c.is_ascii_digit() || matches!(c, '.' | '-' | '+'))
-        .collect();
-    number.parse().ok()
 }
 
 /// Detect cycles in the group hierarchy using DFS.

@@ -15,6 +15,9 @@ toml = "1.1"
 clap = { version = "4", features = ["derive", "env", "color"] }
 miette = { version = "7", features = ["fancy"] }
 thiserror = "2"
+lopdf = "0.39"
+tempfile = "3"
+usvg = "0.47"
 
 [[bin]]
 name = "figurefit"
@@ -23,9 +26,6 @@ path = "src/main.rs"
 [[bin]]
 name = "figure-layout"
 path = "src/bin/figure-layout.rs"
-
-[dev-dependencies]
-tempfile = "3"
 
 [lints.clippy]
 clone_on_copy = "warn"

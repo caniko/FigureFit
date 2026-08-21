@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    crane.url = "github:ipetkov/crane";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -12,6 +13,7 @@
   outputs = {
     self,
     nixpkgs,
+    crane,
     rust-overlay,
   }: let
     systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
@@ -29,6 +31,15 @@
       pkgs,
       lib,
     }: let
+      craneLib = crane.mkLib pkgs;
+      figurefit = craneLib.buildPackage {
+        src = lib.fileset.toSource {
+          root = ./.;
+          fileset = lib.fileset.unions [./Cargo.toml ./Cargo.lock ./src];
+        };
+        strictDeps = true;
+      };
+
       website = pkgs.stdenv.mkDerivation {
         pname = "figurefit-website";
         version = "0.1.0";
@@ -71,7 +82,7 @@
         cp -r ${docs}/* $out/docs/
       '';
     in {
-      inherit website docs site;
+      inherit figurefit website docs site;
       default = site;
     });
 

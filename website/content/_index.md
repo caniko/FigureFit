@@ -4,7 +4,7 @@ title = "FigureFit"
 [extra]
 tagline = "Scientific figure layouts that can be reviewed, checked, and reproduced."
 subtitle = "FigureFit turns explicit TOML specs into manuscript-ready TikZ, stable reports, and quick SVG previews for multi-panel scientific figures."
-install = "cargo install --git https://codeberg.org/caniko/FigureFit"
+install = "cargo install --git https://github.com/caniko/FigureFit"
 
 [[extra.features]]
 title = "Constraint-Aware Layout"

@@ -1,4 +1,4 @@
-base_url = "https://caniko.codeberg.page/FigureFit"
+base_url = "https://caniko.github.io/FigureFit"
 title = "FigureFit"
 description = "Scientific multi-panel figure fitting and layout solver"
 default_language = "en"

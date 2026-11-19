@@ -210,3 +210,57 @@ pub fn emit_tikz(layout: &SolvedLayout, page: &PageConfig) -> String {
     writeln!(out, "\\end{{tikzpicture}}").unwrap();
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::FigureSpec;
+
+    /// With slack (height_mm < max_height_mm) each panel must still print at
+    /// its reported h_mm: content height + gap + label gutter.
+    #[test]
+    fn panels_print_at_reported_height_with_slack() {
+        let spec = FigureSpec::from_toml(
+            r#"
+[page]
+width_mm = 160
+max_height_mm = 216
+label_height_mm = 4
+
+[[panel]]
+id = "A"
+aspect = 2.0
+
+[[panel]]
+id = "B"
+aspect = 2.0
+
+[[group]]
+id = "root"
+kind = "atomic"
+panels = ["A", "B"]
+"#,
+        )
+        .unwrap();
+        let layout = crate::solve::solve(&spec);
+        assert!(layout.height_mm < spec.page.max_height_mm - 1.0, "no slack");
+
+        let tikz = emit_tikz(&layout, &spec.page);
+        let num = |s: &str, pre: &str, post: &str| -> f64 {
+            let i = s.find(pre).unwrap() + pre.len();
+            s[i..i + s[i..].find(post).unwrap()].parse().unwrap()
+        };
+        let fh_mm = num(&tikz, "\\fh=", "\\linewidth") * spec.page.width_mm;
+        let a = &layout.placements[0];
+        let include = format!("{{_{}}}}};", a.panel_id); // `{<figure>_A}};`
+        let line = tikz.lines().find(|l| l.ends_with(&include)).unwrap();
+        let printed = num(line, "height=", "\\fh") * fh_mm
+            + spec.page.panel_gap_mm
+            + spec.page.label_height_mm;
+        assert!(
+            (printed - a.h_mm).abs() < 0.1,
+            "printed {printed:.2}mm, report {:.2}mm",
+            a.h_mm
+        );
+    }
+}

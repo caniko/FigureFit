@@ -602,8 +602,11 @@ fn build_layout(
 ) -> SolvedLayout {
     let page_w = spec.page.width_mm;
     let page_h = spec.page.max_height_mm;
-    let bbox = Rect::new(0.0, 0.0, 1.0, best.height / page_h);
-    let resolved = best.tree.resolve(bbox, page_w, page_h);
+    // Output rects are fractions of the solved figure (page_w × best.height),
+    // the frame every codegen backend and inset placement draws into.
+    let resolved = best
+        .tree
+        .resolve(Rect::new(0.0, 0.0, 1.0, 1.0), page_w, best.height);
     let panel_map = spec.panel_map();
 
     let placements: Vec<Placement> = resolved
@@ -611,7 +614,7 @@ fn build_layout(
         .map(|(idx, rect)| {
             let p = &best.seq.panels[*idx];
             let w_mm = rect.w * page_w;
-            let h_mm = rect.h * page_h;
+            let h_mm = rect.h * best.height;
             let aspect_actual = w_mm / h_mm;
             let (void_frac, void_side) = crate::tree::compute_void(aspect_actual, p.aspect);
             let panel_def = panel_map.get(p.panel_id.as_str());

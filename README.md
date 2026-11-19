@@ -1,5 +1,11 @@
 # FigureFit
 
+<!-- simit:badges:start -->
+
+[![CI](https://img.shields.io/badge/CI-managed-2088ff)](.github/workflows/ci.yaml) [![docs](https://img.shields.io/badge/docs-enabled-6f42c1)](docs)
+
+<!-- simit:badges:end -->
+
 A scientific multi-panel figure fitting and layout solver.
 
 Given a TOML specification describing panels (with target aspect ratios) and

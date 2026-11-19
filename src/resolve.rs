@@ -360,6 +360,7 @@ fn enumerate_alt_combos(
 // ── Sequence construction ───────────────────────────────────────────
 
 /// Build a flat panel sequence from a group config and alt choices.
+#[allow(clippy::too_many_arguments)]
 fn build_sequence(
     root_id: &str,
     group_map: &HashMap<&str, &GroupDef>,

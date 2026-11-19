@@ -5,7 +5,7 @@ FigureFit is a Rust command-line tool and library.
 ## From Source
 
 ```bash
-git clone https://codeberg.org/caniko/FigureFit.git
+git clone https://github.com/caniko/FigureFit.git
 cd FigureFit
 cargo install --path .
 ```

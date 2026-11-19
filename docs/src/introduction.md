@@ -26,4 +26,4 @@ It is designed for figure iteration where panel aspect ratios, hierarchy, requir
 
 SVG crop boxes are unsupported because SVG has no crop-box concept. PDF tight bbox derivation requires `mutool` from MuPDF. Use explicit `aspect` values when a source cannot be measured in the intended way.
 
-Source repository: <https://codeberg.org/caniko/FigureFit>
+Source repository: <https://github.com/caniko/FigureFit>

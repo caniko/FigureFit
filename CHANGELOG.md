@@ -8,3 +8,6 @@
   explicit constraints, insets, SVG source aspect derivation, preview SVGs,
   TOML reports, and CI-oriented `--check` quality gates.
 - Defers PDF aspect derivation and non-media bbox source policies.
+- Fixes panels shrinking in TikZ and preview output when the solved height is
+  below `max_height_mm`: placement fractions are now relative to the solved
+  figure height.

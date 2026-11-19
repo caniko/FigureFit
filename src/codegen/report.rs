@@ -80,10 +80,10 @@ pub fn emit_report(layout: &SolvedLayout) -> String {
             writeln!(out, "pad_mm = {:.1}", p.pad_mm).unwrap();
         }
         if let Some(label_gutter) = p.label_gutter_mm {
-            writeln!(out, "label_gutter_mm = {:.1}", label_gutter).unwrap();
+            writeln!(out, "label_gutter_mm = {label_gutter:.1}").unwrap();
         }
         if let Some(legend_margin) = p.legend_margin_mm {
-            writeln!(out, "legend_margin_mm = {:.1}", legend_margin).unwrap();
+            writeln!(out, "legend_margin_mm = {legend_margin:.1}").unwrap();
         }
         if p.void_frac > 1e-6 {
             writeln!(out, "void_frac = {:.3}", p.void_frac).unwrap();
@@ -114,10 +114,10 @@ pub fn emit_report(layout: &SolvedLayout) -> String {
             writeln!(out, "pad_mm = {:.1}", ip.pad_mm).unwrap();
         }
         if let Some(label_gutter) = ip.label_gutter_mm {
-            writeln!(out, "label_gutter_mm = {:.1}", label_gutter).unwrap();
+            writeln!(out, "label_gutter_mm = {label_gutter:.1}").unwrap();
         }
         if let Some(legend_margin) = ip.legend_margin_mm {
-            writeln!(out, "legend_margin_mm = {:.1}", legend_margin).unwrap();
+            writeln!(out, "legend_margin_mm = {legend_margin:.1}").unwrap();
         }
         if ip.void_frac > 1e-6 {
             writeln!(out, "void_frac = {:.3}", ip.void_frac).unwrap();
